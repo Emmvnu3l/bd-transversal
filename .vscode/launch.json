@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-BaseDeDatosApplication<baseDeDatos>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.noRelacional.baseDeDatos.BaseDeDatosApplication",
+            "projectName": "baseDeDatos",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-RelacionalApplication<relacional>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.relacional.relacional.RelacionalApplication",
+            "projectName": "relacional",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
