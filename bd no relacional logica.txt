@@ -1,0 +1,58 @@
+// COLECCIÓN: reviews (millones de documentos)
+Combina ambas: Referenced + Embedded para estadísticas
+
+
+{
+  _id: "abc123",
+  productId: 1,
+  userId: 100,
+  rating: 5,
+  comentario: "Excelente...",
+  fecha: "2025-12-15"
+}
+
+// COLECCIÓN: product_stats (resumen embebido)
+{
+  _id: 1,  // productId
+  totalReseñas: 1523,
+  promedioRating: 4.3,
+  distribución: {5: 800, 4: 400, 3: 200, 2: 80, 1: 43},
+  
+  // EMBEBIDO: Últimas 5 reseñas (cache)
+  últimas5: [
+    {usuario: "Juan", rating: 5, comentario: "Excelente"},
+    {usuario: "María", rating: 4, comentario: "Buena"}
+  ]
+}
+
+
+Flujo de Queries:
+
+// 1. Mostrar página de producto (RÁPIDO)
+ProductStats stats = statsRepository.findById(1L);
+// Tienes: promedio 4.3★, 1523 reseñas, últimas 5 reseñas embebidas
+
+// 2. Usuario hace clic en "Ver todas las reseñas"
+Page<Review> allReviews = reviewRepository.findByProductId(1L, pageable);
+// Ahora cargas todas con paginación
+
+HÍBRIDO (Lo mejor):
+┌─────────────────┐        ┌──────────────────┐
+│ ProductStats    │        │ Review 1         │
+│ ├─ promedio: 4.3│        │ ├─ productId: 1  │
+│ ├─ total: 1523  │        │ ├─ rating        │
+│ └─ últimas5: [] │        └──────────────────┘
+└─────────────────┘        ... (todas las reseñas)
+✅ Rápido para mostrar resumen
+✅ Sin límites para todas las reseñas
+✅ Lo mejor de ambos mundos
+
+✅ Ventajas del Modelo Implementado:
+✅ Referenced: Miles de reseñas sin límite
+✅ Embedded stats: Consultas ultra rápidas (1 query)
+✅ Caché: Últimas 5 reseñas embebidas
+✅ Auto-actualización: Stats se recalculan automáticamente
+✅ Validaciones: No duplicados, ratings 1-5
+✅ Swagger: Documentación interactiva
+
+¿Quieres que arranquemos la aplicación para probarlo?
