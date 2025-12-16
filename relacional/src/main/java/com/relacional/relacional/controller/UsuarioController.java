@@ -4,6 +4,8 @@ import com.relacional.relacional.dto.UsuarioRequest;
 import com.relacional.relacional.dto.UsuarioResponse;
 import com.relacional.relacional.model.Usuario;
 import com.relacional.relacional.service.UsuarioService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +15,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/usuarios")
+@Tag(name = "Usuarios", description = "API para gestión de usuarios")
 public class UsuarioController {
     private final UsuarioService usuarioService;
 
@@ -21,12 +24,14 @@ public class UsuarioController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar usuarios", description = "Obtiene todos los usuarios registrados")
     public ResponseEntity<List<UsuarioResponse>> listar() {
         List<UsuarioResponse> list = usuarioService.listar().stream().map(this::toResponse).collect(Collectors.toList());
         return ResponseEntity.ok(list);
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Obtener usuario", description = "Obtiene un usuario por su ID")
     public ResponseEntity<UsuarioResponse> obtener(@PathVariable Long id) {
         Usuario u = usuarioService.obtener(id);
         if (u == null) return ResponseEntity.notFound().build();
@@ -34,26 +39,31 @@ public class UsuarioController {
     }
 
     @PostMapping
+    @Operation(summary = "Crear usuario", description = "Crea un nuevo usuario con teléfonos opcionales")
     public ResponseEntity<UsuarioResponse> crear(@RequestBody UsuarioRequest request) {
         Usuario entity = new Usuario();
         entity.setNombre(request.getNombre());
         entity.setEmail(request.getEmail());
+        entity.setTelefonos(usuarioService.serializeTelefonos(request.getTelefonos()));
         Usuario creado = usuarioService.crear(entity, request.getPassword());
         if (creado == null) return ResponseEntity.badRequest().build();
         return ResponseEntity.created(URI.create("/api/usuarios/" + creado.getId())).body(toResponse(creado));
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Actualizar usuario", description = "Actualiza los datos de un usuario existente")
     public ResponseEntity<UsuarioResponse> actualizar(@PathVariable Long id, @RequestBody UsuarioRequest request) {
         Usuario datos = new Usuario();
         datos.setNombre(request.getNombre());
         datos.setEmail(request.getEmail());
+        datos.setTelefonos(usuarioService.serializeTelefonos(request.getTelefonos()));
         Usuario actualizado = usuarioService.actualizar(id, datos, request.getPassword());
         if (actualizado == null) return ResponseEntity.badRequest().build();
         return ResponseEntity.ok(toResponse(actualizado));
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Eliminar usuario", description = "Elimina un usuario por su ID")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         boolean ok = usuarioService.eliminar(id);
         if (!ok) return ResponseEntity.notFound().build();
@@ -65,6 +75,7 @@ public class UsuarioController {
         r.setId(u.getId());
         r.setNombre(u.getNombre());
         r.setEmail(u.getEmail());
+        r.setTelefonos(usuarioService.parseTelefonos(u.getTelefonos()));
         return r;
     }
 }

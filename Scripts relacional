@@ -1,0 +1,50 @@
+/* =============================================
+   RECORD para Cabecera de Orden
+   ============================================= */
+
+DECLARE
+    -- Definir tipo RECORD para la orden (sin productos)
+    TYPE r_orden_type IS RECORD (
+        orden_id        NUMBER,
+        fecha_creacion  DATE,
+        usuario_id      NUMBER,
+        nombre_cliente  VARCHAR2(100),
+        email_cliente   VARCHAR2(100),
+        total           NUMBER(10,2),
+        estado          VARCHAR2(20)
+    );
+    
+    -- Declarar variable del tipo RECORD
+    v_orden r_orden_type;
+    
+BEGIN
+    -- Obtener datos de una orden específica
+    SELECT 
+        o.id,
+        o.creado_en,
+        o.id,
+        u.nombre,
+        u.email,
+        o.total,
+        o.estado
+    INTO v_orden
+    FROM ordenes o
+    JOIN usuarios u ON o.id = u.id
+    WHERE o.id = 1;
+    
+    -- Imprimir datos del RECORD
+    DBMS_OUTPUT.PUT_LINE('=== INFORMACIÓN DE LA ORDEN ===');
+    DBMS_OUTPUT.PUT_LINE('ID Orden: ' || v_orden.orden_id);
+    DBMS_OUTPUT.PUT_LINE('Fecha: ' || TO_CHAR(v_orden.fecha_creacion, 'DD/MM/YYYY HH24:MI'));
+    DBMS_OUTPUT.PUT_LINE('Cliente: ' || v_orden.nombre_cliente);
+    DBMS_OUTPUT.PUT_LINE('Email: ' || v_orden.email_cliente);
+    DBMS_OUTPUT.PUT_LINE('Total: $' || v_orden.total);
+    DBMS_OUTPUT.PUT_LINE('Estado: ' || v_orden.estado);
+    
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('Orden no encontrada');
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/

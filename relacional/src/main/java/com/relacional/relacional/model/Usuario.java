@@ -26,6 +26,9 @@ public class Usuario {
     @Column(nullable = false, length = 100)
     private String passwordHash;
 
+    @Column(length = 200)
+    private String telefonos;
+
     @Schema(hidden = true)
     @Column(nullable = false)
     private OffsetDateTime creadoEn;
@@ -92,6 +95,14 @@ public class Usuario {
 
     public void setActualizadoEn(OffsetDateTime actualizadoEn) {
         this.actualizadoEn = actualizadoEn;
+    }
+
+    public String getTelefonos() {
+        return telefonos;
+    }
+
+    public void setTelefonos(String telefonos) {
+        this.telefonos = telefonos;
     }
 
     @Override
