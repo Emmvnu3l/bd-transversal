@@ -43,8 +43,14 @@ public class UsuarioController {
     public ResponseEntity<UsuarioResponse> crear(@RequestBody UsuarioRequest request) {
         Usuario entity = new Usuario();
         entity.setNombre(request.getNombre());
+        entity.setApellido(request.getApellido());
         entity.setEmail(request.getEmail());
+        entity.setTelefono(request.getTelefono());
         entity.setTelefonos(usuarioService.serializeTelefonos(request.getTelefonos()));
+        entity.setDireccion(request.getDireccion());
+        entity.setCiudad(request.getCiudad());
+        entity.setEstado(request.getEstado());
+        entity.setCodigoPostal(request.getCodigoPostal());
         Usuario creado = usuarioService.crear(entity, request.getPassword());
         if (creado == null) return ResponseEntity.badRequest().build();
         return ResponseEntity.created(URI.create("/api/usuarios/" + creado.getId())).body(toResponse(creado));
@@ -55,8 +61,14 @@ public class UsuarioController {
     public ResponseEntity<UsuarioResponse> actualizar(@PathVariable Long id, @RequestBody UsuarioRequest request) {
         Usuario datos = new Usuario();
         datos.setNombre(request.getNombre());
+        datos.setApellido(request.getApellido());
         datos.setEmail(request.getEmail());
+        datos.setTelefono(request.getTelefono());
         datos.setTelefonos(usuarioService.serializeTelefonos(request.getTelefonos()));
+        datos.setDireccion(request.getDireccion());
+        datos.setCiudad(request.getCiudad());
+        datos.setEstado(request.getEstado());
+        datos.setCodigoPostal(request.getCodigoPostal());
         Usuario actualizado = usuarioService.actualizar(id, datos, request.getPassword());
         if (actualizado == null) return ResponseEntity.badRequest().build();
         return ResponseEntity.ok(toResponse(actualizado));
@@ -74,8 +86,14 @@ public class UsuarioController {
         UsuarioResponse r = new UsuarioResponse();
         r.setId(u.getId());
         r.setNombre(u.getNombre());
+        r.setApellido(u.getApellido());
         r.setEmail(u.getEmail());
+        r.setTelefono(u.getTelefono());
         r.setTelefonos(usuarioService.parseTelefonos(u.getTelefonos()));
+        r.setDireccion(u.getDireccion());
+        r.setCiudad(u.getCiudad());
+        r.setEstado(u.getEstado());
+        r.setCodigoPostal(u.getCodigoPostal());
         return r;
     }
 }

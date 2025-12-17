@@ -71,14 +71,30 @@ public class UsuarioService {
         Usuario actual = usuarioRepository.findById(id).orElse(null);
         if (actual == null) return null;
         if (datos.getNombre() != null) actual.setNombre(datos.getNombre());
+        if (datos.getApellido() != null) actual.setApellido(datos.getApellido());
         if (datos.getEmail() != null) {
             if (!datos.getEmail().equals(actual.getEmail()) && usuarioRepository.existsByEmail(datos.getEmail())) {
                 return null;
             }
             actual.setEmail(datos.getEmail());
         }
+        if (datos.getTelefono() != null) {
+            actual.setTelefono(datos.getTelefono());
+        }
         if (datos.getTelefonos() != null) {
             actual.setTelefonos(datos.getTelefonos());
+        }
+        if (datos.getDireccion() != null) {
+            actual.setDireccion(datos.getDireccion());
+        }
+        if (datos.getCiudad() != null) {
+            actual.setCiudad(datos.getCiudad());
+        }
+        if (datos.getEstado() != null) {
+            actual.setEstado(datos.getEstado());
+        }
+        if (datos.getCodigoPostal() != null) {
+            actual.setCodigoPostal(datos.getCodigoPostal());
         }
         if (rawPassword != null && !rawPassword.isBlank()) {
             actual.setPasswordHash(passwordEncoder.encode(rawPassword));

@@ -1,0 +1,250 @@
+
+CREATE OR REPLACE PACKAGE pkg_productos IS
+    
+    -- Constantes públicas
+    c_stock_minimo CONSTANT NUMBER := 10;
+    -- FUNCIONES PUBLICAS
+    /* Validar disponibilidad de stock (retorna texto) */
+    FUNCTION fn_stock_disponible_varchar(
+        p_producto_id IN NUMBER,
+        p_cantidad_requerida IN NUMBER
+    ) RETURN VARCHAR2;
+    
+    /* Calcular precio con descuento */
+    FUNCTION fn_calcular_precio_descuento(
+        p_producto_id IN NUMBER,
+        p_porcentaje_descuento IN NUMBER
+    ) RETURN NUMBER;
+    -- PROCEDIMIENTOS PUBLICOS
+    /* Validar y descontar stock de un producto */
+    PROCEDURE sp_validar_y_descontar_stock(
+        p_producto_id IN NUMBER,
+        p_cantidad IN NUMBER
+    );
+    
+    /* Actualizar precio de un producto */
+    PROCEDURE sp_actualizar_precio(
+        p_producto_id IN NUMBER,
+        p_nuevo_precio IN NUMBER
+    );
+END pkg_productos;
+/
+
+
+-- BODY 
+
+CREATE OR REPLACE PACKAGE BODY pkg_productos IS
+
+    v_contador_operaciones NUMBER := 0;
+    c_max_descuento CONSTANT NUMBER := 50;
+    
+    -- FUNCIONES PRIVADAS
+    
+    /* Función privada: Obtener nombre del producto */
+    FUNCTION fn_obtener_nombre_producto(p_producto_id IN NUMBER) RETURN VARCHAR2 IS
+        v_nombre VARCHAR2(180);
+    BEGIN
+        SELECT nombre
+        INTO v_nombre
+        FROM productos
+        WHERE id = p_producto_id;
+        
+        RETURN v_nombre;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN 'Producto ID ' || p_producto_id;
+    END fn_obtener_nombre_producto;
+    
+    -- IMPLEMENTACIÓN DE FUNCIONES PÚBLICAS
+    
+    FUNCTION fn_stock_disponible_varchar(
+        p_producto_id IN NUMBER,
+        p_cantidad_requerida IN NUMBER
+    ) RETURN VARCHAR2 IS
+        v_stock_actual NUMBER;
+        v_activo NUMBER;
+    BEGIN
+        -- Obtener stock y estado del producto
+        SELECT stock, activo
+        INTO v_stock_actual, v_activo
+        FROM productos
+        WHERE id = p_producto_id;
+        
+        -- Validar que esté activo
+        IF v_activo = 0 THEN
+            RETURN 'INACTIVO';
+        ELSIF v_stock_actual >= p_cantidad_requerida THEN
+            RETURN 'DISPONIBLE';
+        ELSE
+            RETURN 'INSUFICIENTE';
+        END IF;
+        
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN 'NO_EXISTE';
+        WHEN OTHERS THEN
+            RETURN 'ERROR';
+    END fn_stock_disponible_varchar;
+    
+    FUNCTION fn_calcular_precio_descuento(
+        p_producto_id IN NUMBER,
+        p_porcentaje_descuento IN NUMBER
+    ) RETURN NUMBER IS
+        v_precio NUMBER;
+        v_descuento NUMBER;
+    BEGIN
+        -- Validar porcentaje
+        IF p_porcentaje_descuento < 0 OR p_porcentaje_descuento > c_max_descuento THEN
+            RAISE_APPLICATION_ERROR(-20002, 
+                'Descuento debe estar entre 0 y ' || c_max_descuento || '%');
+        END IF;
+        
+        -- Obtener precio
+        SELECT precio
+        INTO v_precio
+        FROM productos
+        WHERE id = p_producto_id;
+        
+        -- Calcular descuento
+        v_descuento := v_precio * (p_porcentaje_descuento / 100);
+        
+        RETURN ROUND(v_precio - v_descuento, 2);
+        
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Producto no encontrado');
+    END fn_calcular_precio_descuento;
+    
+
+    -- IMPLEMENTACIÓN DE PROCEDIMIENTOS PÚBLICOS
+    
+    PROCEDURE sp_validar_y_descontar_stock(
+        p_producto_id IN NUMBER,
+        p_cantidad IN NUMBER
+    ) IS
+        e_stock_insuficiente EXCEPTION;
+        v_stock NUMBER;
+        v_nombre VARCHAR2(180);
+    BEGIN
+        -- Obtener nombre para mensajes
+        v_nombre := fn_obtener_nombre_producto(p_producto_id);
+        
+        -- Obtener stock actual con bloqueo
+        SELECT stock
+        INTO v_stock
+        FROM productos
+        WHERE id = p_producto_id AND activo = 1
+        FOR UPDATE;
+        
+        -- Validar stock
+        IF p_cantidad > v_stock THEN
+            RAISE e_stock_insuficiente;
+        END IF;
+        
+        -- Descontar stock
+        UPDATE productos
+        SET stock = stock - p_cantidad,
+            actualizado_en = SYSTIMESTAMP
+        WHERE id = p_producto_id;
+        
+        v_contador_operaciones := v_contador_operaciones + 1;
+        
+        COMMIT;
+        
+        DBMS_OUTPUT.PUT_LINE('======================================');
+        DBMS_OUTPUT.PUT_LINE('Stock descontado exitosamente');
+        DBMS_OUTPUT.PUT_LINE('Producto: ' || v_nombre);
+        DBMS_OUTPUT.PUT_LINE('Cantidad descontada: ' || p_cantidad);
+        DBMS_OUTPUT.PUT_LINE('Nuevo stock: ' || (v_stock - p_cantidad));
+        DBMS_OUTPUT.PUT_LINE('======================================');
+        
+    EXCEPTION
+        WHEN e_stock_insuficiente THEN
+            ROLLBACK;
+            RAISE_APPLICATION_ERROR(-20001, 
+                'Stock insuficiente para ' || v_nombre || 
+                '. Disponible: ' || v_stock || ', Solicitado: ' || p_cantidad);
+        WHEN NO_DATA_FOUND THEN
+            ROLLBACK;
+            RAISE_APPLICATION_ERROR(-20003, 
+                'Producto no encontrado o inactivo');
+        WHEN OTHERS THEN
+            ROLLBACK;
+            RAISE;
+    END sp_validar_y_descontar_stock;
+    
+    PROCEDURE sp_actualizar_precio(
+        p_producto_id IN NUMBER,
+        p_nuevo_precio IN NUMBER
+    ) IS
+        v_nombre VARCHAR2(180);
+        v_precio_anterior NUMBER;
+    BEGIN
+        -- Validar precio positivo
+        IF p_nuevo_precio <= 0 THEN
+            RAISE_APPLICATION_ERROR(-20005, 
+                'El precio debe ser mayor a cero');
+        END IF;
+        
+        -- Obtener nombre y precio anterior
+        SELECT nombre, precio
+        INTO v_nombre, v_precio_anterior
+        FROM productos
+        WHERE id = p_producto_id
+        FOR UPDATE;
+        
+        -- Actualizar precio
+        UPDATE productos
+        SET precio = p_nuevo_precio,
+            actualizado_en = SYSTIMESTAMP
+        WHERE id = p_producto_id;
+        
+        v_contador_operaciones := v_contador_operaciones + 1;
+        
+        COMMIT;
+        
+        DBMS_OUTPUT.PUT_LINE('======================================');
+        DBMS_OUTPUT.PUT_LINE('Precio actualizado exitosamente');
+        DBMS_OUTPUT.PUT_LINE('Producto: ' || v_nombre);
+        DBMS_OUTPUT.PUT_LINE('Precio anterior: $' || v_precio_anterior);
+        DBMS_OUTPUT.PUT_LINE('Precio nuevo: $' || p_nuevo_precio);
+        
+        IF p_nuevo_precio > v_precio_anterior THEN
+            DBMS_OUTPUT.PUT_LINE('Aumento: $' || (p_nuevo_precio - v_precio_anterior));
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Descuento: $' || (v_precio_anterior - p_nuevo_precio));
+        END IF;
+        DBMS_OUTPUT.PUT_LINE('======================================');
+        
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            ROLLBACK;
+            RAISE_APPLICATION_ERROR(-20001, 'Producto no encontrado');
+        WHEN OTHERS THEN
+            ROLLBACK;
+            RAISE;
+    END sp_actualizar_precio;
+    
+END pkg_productos;
+/
+
+-- Pruebas del package
+-- =======================================
+SELECT 
+    id,
+    nombre,
+    stock,
+    pkg_productos.fn_stock_disponible_varchar(id, 5) AS disponibilidad_5,
+    pkg_productos.fn_stock_disponible_varchar(id, 50) AS disponibilidad_50
+FROM productos
+WHERE ROWNUM <= 5;
+-- =======================================
+SELECT 
+    id,
+    nombre,
+    precio AS precio_original,
+    pkg_productos.fn_calcular_precio_descuento(id, 10) AS precio_10_desc,
+    pkg_productos.fn_calcular_precio_descuento(id, 25) AS precio_25_desc,
+    precio - pkg_productos.fn_calcular_precio_descuento(id, 10) AS ahorro_10
+FROM productos
+WHERE ROWNUM <= 5;
